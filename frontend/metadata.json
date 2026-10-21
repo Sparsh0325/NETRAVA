@@ -1,0 +1,8 @@
+{
+  "name": "IntelliShare - Case Continuity Platform",
+  "description": "Investigative understanding layer designed to reduce information loss during officer transfers. Supports CCTNS & ESAKYA.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ]
+}

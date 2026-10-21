@@ -1,0 +1,32 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: intellishare-backend-test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  sql:
+    init:
+      mode: always
+    open-in-view: false
+  flyway:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+intellishare:
+  version: 0.1.0-test
+  jwt:
+    secret: VGhpc0lzQVRlc3RPbmx5U2VjcmV0S2V5Rm9ySldUSFNpZ25pbmc=
+    expiration: PT1H
