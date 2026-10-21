@@ -1,41 +1,44 @@
-import React from 'react';
-import { ArrowUpRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ApiError, CaseAnalytics, fetchCaseAnalytics } from '../../lib/api';
 
-const TrendingPatterns = () => {
-  const patterns = [
-    { id: 'PAT-001', name: 'Synthetic example pattern A', confidence: 94, trend: 'up', risk: 'Example', type: 'Example' },
-    { id: 'PAT-002', name: 'Synthetic example pattern B', confidence: 88, trend: 'up', risk: 'Example', type: 'Example' },
-    { id: 'PAT-003', name: 'Synthetic example pattern C', confidence: 76, trend: 'stable', risk: 'Example', type: 'Example' },
-    { id: 'PAT-004', name: 'Synthetic example pattern D', confidence: 72, trend: 'down', risk: 'Example', type: 'Example' },
-  ];
+const TrendingPatterns: React.FC = () => {
+  const [analytics, setAnalytics] = useState<CaseAnalytics | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    fetchCaseAnalytics()
+      .then((result) => { if (active) setAnalytics(result); })
+      .catch((cause) => { if (active) setError(cause instanceof ApiError ? cause.message : 'Could not load saved case totals.'); });
+    return () => { active = false; };
+  }, []);
+
+  const caseTypes = [...(analytics?.byType ?? [])].sort((a, b) => b.count - a.count).slice(0, 6);
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden h-full">
-      <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-        <h3 className="font-bold text-navy-900 text-sm uppercase tracking-wide">Pattern Examples (Synthetic)</h3>
-        <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-bold">Sample data</span>
+    <section className="h-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-wide text-navy-900 dark:text-white">Saved cases by type</h3>
+          <p className="mt-1 text-xs text-slate-500">Counts from your agency’s persisted records</p>
+        </div>
+        {analytics && <span className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-bold text-blue-800">{analytics.totalCases} total</span>}
       </div>
-      <div className="p-4 space-y-3">
-        {patterns.map((pattern, i) => (
-          <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-200 group">
-            <div className="flex-1">
-              <div className="font-bold text-sm text-navy-900 group-hover:text-navy-700">{pattern.name}</div>
-              <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
-                <span>Illustrative score: <span className="font-mono font-medium text-navy-700">{pattern.confidence}% (sample)</span></span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-               {pattern.risk === 'High' && (
-                 <span className="text-[10px] font-bold text-red-700 flex items-center bg-red-50 px-2 py-1 rounded border border-red-100">
-                   <ArrowUpRight size={10} className="mr-1" /> High Risk
-                 </span>
-               )}
-               <span className="px-3 py-1 bg-slate-100 border border-slate-200 rounded text-xs font-medium text-slate-500">Illustration</span>
-            </div>
-          </div>
-        ))}
+      <div className="space-y-3 p-4" aria-live="polite">
+        {error ? <p role="alert" className="text-sm text-red-700">{error}</p>
+          : !analytics ? <p className="text-sm text-slate-500">Loading saved case totals…</p>
+            : caseTypes.length === 0 ? <p className="text-sm text-slate-500">No saved cases yet.</p>
+              : caseTypes.map((item) => {
+                const percent = analytics.totalCases ? Math.round((item.count / analytics.totalCases) * 100) : 0;
+                return <div key={item.label}>
+                  <div className="mb-1 flex justify-between text-sm"><span className="font-medium text-slate-700 dark:text-slate-200">{item.label}</span><span className="font-mono text-slate-500">{item.count}</span></div>
+                  <div className="h-2 overflow-hidden rounded bg-slate-100 dark:bg-slate-700" role="progressbar" aria-label={`${item.label} share of saved cases`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
+                    <div className="h-full rounded bg-blue-600" style={{ width: `${percent}%` }} />
+                  </div>
+                </div>;
+              })}
       </div>
-    </div>
+    </section>
   );
 };
 

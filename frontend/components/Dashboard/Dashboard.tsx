@@ -96,7 +96,7 @@ const Dashboard = () => {
       {statsError && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{statsError}</div>}
 
       <div role="note" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-        Case totals and activity are database-backed. The heatmap and trend examples below are synthetic sample visuals, not live intelligence.
+        Dashboard totals, case-type counts, and mapped locations come from saved records. The map shows only the latest 100 accessible cases with coordinates; it does not provide predictions.
       </div>
 
       {/* 3. Continuity & Impact Section (The New Core Narrative) */}
@@ -114,7 +114,7 @@ const Dashboard = () => {
                  Joining a case mid-stream?
                </h3>
                <p className="text-blue-100 text-sm opacity-90">
-                 Instantly visualize timelines, missing evidence, and suspect links without reading through 500+ pages of physical files.
+                 Review saved case details, evidence, timelines, and recorded agency actions in one workspace.
                </p>
                <button 
                  onClick={() => navigate('/intelligence')}
@@ -124,18 +124,17 @@ const Dashboard = () => {
                </button>
             </div>
 
-            {/* Right: Impact Metrics */}
+            {/* Right: Verified capabilities */}
             <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
                {[
-                 { label: 'Handover Time', val: '~30 Mins', prev: '3-5 Days' },
-                 { label: 'Briefing Prep', val: '~10 Mins', prev: '2-3 Hours' },
-                 { label: 'Cross-Case Lookup', val: 'Instant', prev: 'Multi-System' },
-                 { label: 'Evidence Context', val: 'Visual', prev: 'Manual' },
+                 { label: 'Case storage', val: 'Persistent' },
+                 { label: 'Evidence & timeline', val: 'Recorded' },
+                 { label: 'Audit history', val: 'Database-backed' },
+                 { label: 'Agency sharing', val: 'Permissioned' },
                ].map((m, i) => (
                  <div key={i} className="bg-white/10 border border-white/10 p-3 rounded-lg backdrop-blur-sm">
                     <div className="text-[10px] text-blue-200 uppercase font-bold mb-1">{m.label}</div>
                     <div className="text-lg font-bold text-white">{m.val}</div>
-                    <div className="text-[10px] text-white/50 line-through decoration-red-400">{m.prev}</div>
                  </div>
                ))}
             </div>
@@ -147,12 +146,8 @@ const Dashboard = () => {
         <div className="xl:col-span-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
            <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
              <h3 className="font-bold text-navy-900 dark:text-white flex items-center gap-2">
-               <MapPin size={18} className="text-navy-600 dark:text-blue-400" /> Geospatial Crime Heatmap <span className="text-xs font-normal text-slate-400">(sample data)</span>
+               <MapPin size={18} className="text-navy-600 dark:text-blue-400" /> Saved Case Locations
              </h3>
-             <div className="flex gap-2">
-               <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold">Violent</span>
-               <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">Property</span>
-             </div>
            </div>
            <div className="flex-1 relative">
              <CrimeHeatmap />
@@ -161,7 +156,7 @@ const Dashboard = () => {
         
         <div className="xl:col-span-1 h-full">
            <div className="relative h-full">
-             <div className="absolute right-3 top-3 z-10 rounded bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700">Sample activity</div>
+             <div className="absolute right-3 top-3 z-10 rounded bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">Recorded audit activity</div>
              {activityError ? <div className="p-4 text-sm text-amber-700">{activityError}</div> : <ActivityFeed activities={activities} />}
            </div>
         </div>
@@ -170,7 +165,6 @@ const Dashboard = () => {
       {/* 5. Advanced Intelligence (Trends) */}
       <div className="grid grid-cols-1 gap-6">
          <div>
-           <div className="mb-2 text-xs font-semibold text-amber-700">Sample trends, not calculated from saved cases</div>
            <TrendingPatterns />
          </div>
       </div>
