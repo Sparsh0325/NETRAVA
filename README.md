@@ -105,7 +105,7 @@ SQL Flyway migrations are versioned under `src/main/resources/db/migration`; the
 
 ## Deployment and resume use
 
-Deployment remains pending. First configure a user-owned GitHub repository, production PostgreSQL, backend and frontend hosting, and their environment variables. Keep database/JWT/AI secrets on the backend. Use synthetic demo records only; do not publish real case or personal data.
+Deployment remains pending. Follow [DEPLOYMENT.md](DEPLOYMENT.md) to connect the user-owned GitHub repository, deploy PostgreSQL/backend/frontend, configure production variables, provision the first administrator safely, and verify production workflows. Keep database/JWT/AI secrets on the backend. Use synthetic demo records only; do not publish real case or personal data.
 
 Resume description (limited to verified functionality):
 
