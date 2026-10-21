@@ -18,7 +18,15 @@ if (Test-Path -LiteralPath $envFile) {
 }
 
 if ([string]::IsNullOrWhiteSpace($env:JWT_SECRET)) {
-    $env:JWT_SECRET = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+    $jwtBytes = New-Object byte[] 32
+    $jwtGenerator = [Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $jwtGenerator.GetBytes($jwtBytes)
+    }
+    finally {
+        $jwtGenerator.Dispose()
+    }
+    $env:JWT_SECRET = [Convert]::ToBase64String($jwtBytes)
     Write-Host 'Using a temporary JWT signing key for this local run.'
 }
 
