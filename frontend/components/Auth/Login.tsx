@@ -86,10 +86,11 @@ const Login = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-navy-900/95 to-blue-900/90"></div>
           
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-10">
+            <div className="flex items-center gap-3 mb-3">
               <Shield className="w-8 h-8 text-emerald-400" />
-              <span className="font-bold text-xl tracking-wider">INTELLISHARE</span>
+              <span className="font-bold text-xl tracking-wider">NETRAVA</span>
             </div>
+            <p className="text-[10px] uppercase tracking-widest text-blue-100/80 mb-8">Next-generation Visual &amp; Investigative Intelligence Platform.</p>
             
             <h2 className="text-3xl font-bold leading-tight mb-6">
               Case Continuity &<br/>Investigative<br/>Understanding
@@ -180,7 +181,7 @@ const Login = () => {
                  </div>
                </div>
 
-               <p className="text-xs text-slate-500">Your access role is assigned by IntelliShare.</p>
+               <p className="text-xs text-slate-500">Your access role is assigned by NETRAVA.</p>
 
                <div className="flex items-center justify-between text-sm pt-2">
                  <label className="flex items-center text-gray-600 cursor-pointer select-none">

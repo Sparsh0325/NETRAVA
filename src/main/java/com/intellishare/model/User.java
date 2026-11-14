@@ -86,5 +86,10 @@ public class User {
     public boolean isActive() { return active; }
     public OffsetDateTime getLastLoginAt() { return lastLoginAt; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
+    public void updateProfile(String name, String department, String phone) {
+        this.name = name;
+        this.department = department;
+        this.phone = phone;
+    }
     public void setLastLoginAt(OffsetDateTime lastLoginAt) { this.lastLoginAt = lastLoginAt; }
 }

@@ -16,6 +16,7 @@ interface AuthContextType extends AuthState {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (data: RegisterData) => Promise<boolean>;
+  updateProfile: (data: { name: string; department?: string; phone?: string }) => Promise<void>;
   logout: () => void;
 }
 
@@ -58,12 +59,19 @@ export const AuthProvider = ({ children }: { children?: React.ReactNode }) => {
     return true;
   };
 
+  const updateProfile = async (data: { name: string; department?: string; phone?: string }) => {
+    const result = await apiRequest<Parameters<typeof mapUser>[0]>('/auth/me', {
+      method: 'PUT', body: JSON.stringify(data),
+    });
+    setAuth((current) => current.user ? { ...current, user: mapUser(result) } : current);
+  };
+
   const logout = () => {
     clearSession();
     setAuth({ user: null, isAuthenticated: false, token: null });
   };
 
-  return <AuthContext.Provider value={{ ...auth, isLoading, login, register, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...auth, isLoading, login, register, updateProfile, logout }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

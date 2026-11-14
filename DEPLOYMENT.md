@@ -1,12 +1,18 @@
-# Deployment Runbook
+# NETRAVA Deployment Runbook
 
-This project is prepared for a Vercel frontend and a Railway Spring Boot service with Railway PostgreSQL. Deployment is not complete until a public repository and provider accounts are connected and the production checks below pass.
+**Next-generation Visual & Investigative Intelligence Platform.**
 
-## 1. Create the user-owned repository
+This project is prepared for a Vercel frontend and a Railway Spring Boot service with Railway PostgreSQL. Deployment is not complete until a private GitHub repository and provider accounts are connected and the production checks below pass.
 
-Create an empty public repository named `intellishare-java` in your own GitHub account. Do not initialize it with a README, license, or `.gitignore`; this local project already has them. The local `main` branch has the deployment-ready project commit. Add the repository as `origin` and push `main` after the remote exists.
+## 1. Connect the user-owned repository
 
-Keep `.env`, production database credentials, JWT signing keys, and AI provider keys out of Git. `.env` is ignored; `.env.example` contains placeholders only.
+An empty private GitHub repository named `NETRAVA` has been created under the `Sparsh0325` account.
+
+The local `main` branch contains the project history and current NETRAVA changes. Review, stage, commit, and push the changes after completing the pre-upload checks.
+
+The configured Git remote is:
+
+https://github.com/Sparsh0325/NETRAVA.git
 
 ## 2. Deploy PostgreSQL and the backend on Railway
 

@@ -25,7 +25,7 @@ const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
-  if (isLoading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">Loading IntelliShare…</div>;
+  if (isLoading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">Loading NETRAVA…</div>;
   if (!isAuthenticated) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }

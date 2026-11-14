@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ApiError, deleteCase, fetchCases } from '../../lib/api';
-import { Eye, Edit, Share2, Filter, Download, Briefcase, BarChart3, Trash2 } from 'lucide-react';
+import { Eye, Edit, Filter, Download, Briefcase, BarChart3, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const CaseList = () => {
   const [cases, setCases] = useState<import('../../types').Case[]>([]);
@@ -14,6 +15,9 @@ const CaseList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { preferences } = useTheme();
+  const { user } = useAuth();
+  const canEditCase = user?.role === 'Administrator' || user?.role === 'Officer';
+  const canDeleteCase = user?.role === 'Administrator';
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,7 +51,7 @@ const CaseList = () => {
     const csv = [headers, ...rows].map(row => row.map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\r\n');
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    link.download = 'intellishare-cases.csv'; link.click(); URL.revokeObjectURL(link.href);
+    link.download = 'netrava-cases.csv'; link.click(); URL.revokeObjectURL(link.href);
   };
 
   const formatDate = (dateString: string) => {
@@ -182,16 +186,22 @@ const CaseList = () => {
                       >
                          <Eye size={16} />
                       </button>
-                      <button disabled title="Case editing is not connected yet" className="p-1.5 text-slate-400 rounded opacity-50 cursor-not-allowed">
+                      {canEditCase && <button
+                        onClick={() => navigate(`/cases/${encodeURIComponent(c.id)}?edit=1`)}
+                        className="p-1.5 text-slate-400 hover:text-navy-700 dark:hover:text-blue-400 hover:bg-navy-50 dark:hover:bg-slate-700 rounded transition"
+                        title="Edit Case"
+                        aria-label={`Edit case ${c.id}`}
+                      >
                          <Edit size={16} />
-                      </button>
-                      <button 
+                      </button>}
+                      {canDeleteCase && <button
                         onClick={(e) => handleDelete(c.id, e)}
-                        className="p-1.5 text-slate-400 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-slate-700 rounded transition" 
+                        className="p-1.5 text-slate-400 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-slate-700 rounded transition"
                         title="Delete Case"
+                        aria-label={`Delete case ${c.id}`}
                       >
                          <Trash2 size={16} />
-                      </button>
+                      </button>}
                     </div>
                   </td>
                 </tr>

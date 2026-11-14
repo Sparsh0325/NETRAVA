@@ -27,6 +27,7 @@ import java.time.Duration;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -87,6 +88,30 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized());
         mvc.perform(get("/api/auth/me").header("Authorization", "Bearer invalid-token"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void profileUpdatePersistsEditableFieldsAndReadOnlyUserCanSeeOnlyOwnAudit() throws Exception {
+        String registration = mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson("profile@example.test", "badge-profile", "")))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String token = mapper.readTree(registration).get("token").asText();
+
+        mvc.perform(put("/api/auth/me").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Updated Name\",\"department\":\"Cyber Unit\",\"phone\":\"+91 1234567890\",\"role\":\"Administrator\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Updated Name"))
+                .andExpect(jsonPath("$.department").value("Cyber Unit"))
+                .andExpect(jsonPath("$.phone").value("+91 1234567890"))
+                .andExpect(jsonPath("$.role").value("Read-Only"))
+                .andExpect(jsonPath("$.email").value("profile@example.test"));
+
+        mvc.perform(get("/api/audit-logs/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.action == 'PROFILE_UPDATED')]").isNotEmpty());
+        mvc.perform(get("/api/audit-logs").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
     }
 
     @Test

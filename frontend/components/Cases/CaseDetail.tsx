@@ -1,57 +1,71 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
-  MapPin, 
-  User, 
   Share2, 
-  Activity, 
   ArrowRight,
   GitMerge,
-  Lock, 
   BrainCircuit,
   FileText,
   Image as ImageIcon,
   Film,
   Download,
   Eye,
-  Camera,
-  KeyRound,
-  Unlock,
   XCircle,
-  CheckCircle,
   ShieldAlert,
-  Clock,
   Sparkles,
   History,
   Edit3,
-  Loader,
   Link2
 } from 'lucide-react';
 import { Case } from '../../types';
-import { ApiError, fetchCase, fetchCases } from '../../lib/api';
-import NetworkGraph from '../Analytics/NetworkGraph'; // Kept for other uses if needed, but Related tab will use custom visual
+import { ApiError, fetchCase, fetchCases, updateCase } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 import * as L from 'leaflet';
+
+interface CaseEditValues {
+  title: string;
+  description: string;
+  type: string;
+  status: Case['status'];
+  priority: Case['priority'];
+  incidentDate: string;
+  address: string;
+  city: string;
+  latitude: string;
+  longitude: string;
+}
+
+const caseEditValues = (record: Case): CaseEditValues => ({
+  title: record.title,
+  description: record.description || '',
+  type: record.type,
+  status: record.status,
+  priority: record.priority,
+  incidentDate: record.date || '',
+  address: record.location.address || '',
+  city: record.location.city || '',
+  latitude: record.location.lat ? String(record.location.lat) : '',
+  longitude: record.location.lng ? String(record.location.lng) : '',
+});
 
 const CaseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canEditCase = user?.role === 'Administrator' || user?.role === 'Officer';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editRequested = searchParams.get('edit') === '1';
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [relatedCases, setRelatedCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [editOpen, setEditOpen] = useState(false);
+  const [editValues, setEditValues] = useState<CaseEditValues | null>(null);
+  const [editError, setEditError] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
-  // Evidence Security State
-  const [isEvidenceUnlocked, setIsEvidenceUnlocked] = useState(true);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'face' | 'password' | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  
-
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,6 +82,46 @@ const CaseDetail = () => {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [id]);
+
+  useEffect(() => {
+    if (!caseData || !editRequested || !canEditCase) return;
+    setEditValues(caseEditValues(caseData));
+    setEditError('');
+    setEditOpen(true);
+    setSearchParams(params => {
+      params.delete('edit');
+      return params;
+    }, { replace: true });
+  }, [caseData, editRequested, canEditCase, setSearchParams]);
+
+  const openEdit = () => {
+    if (!caseData) return;
+    setEditValues(caseEditValues(caseData));
+    setEditError('');
+    setEditOpen(true);
+  };
+
+  const saveCase = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!caseData || !editValues) return;
+    setEditSaving(true);
+    setEditError('');
+    const coordinate = (value: string) => value.trim() ? Number(value) : undefined;
+    try {
+      const saved = await updateCase(caseData.id, {
+        ...editValues,
+        incidentDate: editValues.incidentDate || undefined,
+        latitude: coordinate(editValues.latitude),
+        longitude: coordinate(editValues.longitude),
+      });
+      setCaseData(saved);
+      setEditOpen(false);
+    } catch (error) {
+      setEditError(error instanceof ApiError ? error.message : 'Could not save case changes.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   // Leaflet Map Init for Overview
   useEffect(() => {
@@ -86,51 +140,19 @@ const CaseDetail = () => {
             html: `<div class="w-8 h-8 bg-red-500/30 rounded-full flex items-center justify-center animate-pulse"><div class="w-4 h-4 bg-red-600 rounded-full border-2 border-white shadow-lg"></div></div>`
         });
 
+        const popupContent = document.createElement('div');
+        const caseLabel = document.createElement('strong');
+        caseLabel.textContent = caseData.id;
+        const address = document.createElement('div');
+        address.textContent = caseData.location.address;
+        popupContent.append(caseLabel, document.createElement('br'), address);
+
         L.marker([caseData.location.lat, caseData.location.lng], { icon }).addTo(map)
-         .bindPopup(`<b>${caseData.id}</b><br>${caseData.location.address}`).openPopup();
+         .bindPopup(popupContent).openPopup();
          
         return () => { map.remove(); }
     }
   }, [activeTab, caseData]);
-
-  // Auth Logic
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setIsScanning(true);
-      setTimeout(() => {
-        handleAuthSuccess();
-      }, 3000);
-    } catch (err) {
-      alert("Camera access failed. Using password fallback.");
-      setAuthMode('password');
-    }
-  };
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    setIsScanning(false);
-  };
-
-  useEffect(() => {
-    if (authMode === 'face') startCamera();
-    else stopCamera();
-    return () => stopCamera();
-  }, [authMode]);
-
-  const handleAuthSuccess = () => {
-    stopCamera();
-    setIsEvidenceUnlocked(true);
-    setShowAuthModal(false);
-    setAuthMode(null);
-  };
 
   if (loading) {
     return <div className="p-10 text-center text-slate-500">Loading case…</div>;
@@ -181,11 +203,43 @@ const CaseDetail = () => {
           >
             <BrainCircuit size={16} /> AI Analysis
           </button>
-          <button className="bg-navy-800 text-white px-4 py-2 rounded-md font-bold text-sm hover:bg-navy-700 transition shadow-sm flex items-center gap-2">
+          {canEditCase && <button onClick={openEdit} className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-md font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition shadow-sm flex items-center gap-2">
+            <Edit3 size={16} /> Edit Case
+          </button>}
+          {canEditCase && <button
+            onClick={() => navigate(`/share?case=${encodeURIComponent(caseData.id)}`)}
+            className="bg-navy-800 text-white px-4 py-2 rounded-md font-bold text-sm hover:bg-navy-700 transition shadow-sm flex items-center gap-2"
+            title="Continue in the Inter-Agency workspace"
+          >
             <Share2 size={16} /> Share Case
-          </button>
+          </button>}
         </div>
       </div>
+
+      {editOpen && editValues && <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/60 p-4" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !editSaving) setEditOpen(false); }}>
+        <section role="dialog" aria-modal="true" aria-labelledby="edit-case-title" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-800">
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div><h3 id="edit-case-title" className="text-lg font-bold text-navy-900 dark:text-white">Edit case</h3><p className="text-sm text-slate-500">Changes are saved to the case record and audit history.</p></div>
+            <button type="button" aria-label="Close edit case" disabled={editSaving} onClick={() => setEditOpen(false)} className="rounded p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-700"><XCircle size={20}/></button>
+          </div>
+          <form onSubmit={saveCase} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-200">Title<input required maxLength={255} value={editValues.title} onChange={event => setEditValues({...editValues,title:event.target.value})} className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"/></label>
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-200">Case type<input required maxLength={100} value={editValues.type} onChange={event => setEditValues({...editValues,type:event.target.value})} className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"/></label>
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-200">Status<select value={editValues.status} onChange={event => setEditValues({...editValues,status:event.target.value as Case['status']})} className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"><option>Registered</option><option>Under Investigation</option><option>Closed</option><option>Cold Case</option></select></label>
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-200">Priority<select value={editValues.priority} onChange={event => setEditValues({...editValues,priority:event.target.value as Case['priority']})} className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"><option>High</option><option>Medium</option><option>Low</option></select></label>
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-200">Incident date<input type="date" value={editValues.incidentDate} onChange={event => setEditValues({...editValues,incidentDate:event.target.value})} className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"/></label>
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-200">City<input maxLength={100} value={editValues.city} onChange={event => setEditValues({...editValues,city:event.target.value})} className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"/></label>
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-200 sm:col-span-2">Address<input maxLength={255} value={editValues.address} onChange={event => setEditValues({...editValues,address:event.target.value})} className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"/></label>
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-200 sm:col-span-2">Description<textarea maxLength={20000} rows={4} value={editValues.description} onChange={event => setEditValues({...editValues,description:event.target.value})} className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"/></label>
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-200">Latitude<input type="number" min={-90} max={90} step="any" value={editValues.latitude} onChange={event => setEditValues({...editValues,latitude:event.target.value})} className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"/></label>
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-200">Longitude<input type="number" min={-180} max={180} step="any" value={editValues.longitude} onChange={event => setEditValues({...editValues,longitude:event.target.value})} className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"/></label>
+            </div>
+            {editError && <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{editError}</p>}
+            <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700"><button type="button" disabled={editSaving} onClick={() => setEditOpen(false)} className="rounded border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200">Cancel</button><button type="submit" disabled={editSaving} className="rounded bg-navy-800 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{editSaving ? 'Saving…' : 'Save changes'}</button></div>
+          </form>
+        </section>
+      </div>}
 
       {/* Tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
@@ -309,33 +363,15 @@ const CaseDetail = () => {
 
         {/* --- EVIDENCE TAB --- */}
         {activeTab === 'evidence' && (
-           <div className="min-h-[400px]">
-             {!isEvidenceUnlocked ? (
-               <div className="flex flex-col items-center justify-center h-full py-16 text-center animate-fade-in bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mt-4">
-                 <div className="w-20 h-20 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                   <Lock size={40} className="text-slate-400 dark:text-slate-500" />
-                 </div>
-                 <h3 className="text-xl font-bold text-navy-900 dark:text-white mb-2">Restricted Evidence Vault</h3>
-                 <p className="text-slate-500 dark:text-slate-400 max-w-md mb-8">
-                   This case contains sensitive digital evidence including CCTV footage and forensic reports. 
-                   Chain-of-custody protocols require identity verification to access.
-                 </p>
-                 <button 
-                   onClick={() => setShowAuthModal(true)}
-                   className="bg-navy-800 text-white px-8 py-3 rounded-lg font-bold shadow-lg hover:bg-navy-700 transition flex items-center gap-2"
-                 >
-                   <Unlock size={18} /> Request Secure Access
-                 </button>
+           <div className="min-h-[400px] mt-6">
+               <div role="note" className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                 Case access is controlled by your signed-in account and the server’s case permissions. This screen does not perform separate identity verification. Evidence files are not stored; only evidence metadata is shown here.
                </div>
-             ) : (
-               <div className="animate-fade-in mt-6">
+               <div className="animate-fade-in">
                  <div className="flex justify-between items-center mb-6">
                    <h3 className="text-lg font-bold text-navy-900 dark:text-white flex items-center gap-2">
-                     <ShieldAlert size={20} className="text-emerald-500" /> Case Evidence Records
+                      <ShieldAlert size={20} className="text-blue-500" /> Case Evidence Metadata
                    </h3>
-                   <span className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full font-bold border border-emerald-200 flex items-center gap-1">
-                    <CheckCircle size={12} /> Authenticated session
-                   </span>
                  </div>
                  
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -368,7 +404,6 @@ const CaseDetail = () => {
                    );})}
                  </div>
                </div>
-             )}
            </div>
         )}
 
@@ -536,104 +571,6 @@ const CaseDetail = () => {
 
       </div>
 
-      {/* --- AUTH MODAL (Preserved) --- */}
-      {showAuthModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-700 overflow-hidden relative">
-              <button 
-                onClick={() => { setShowAuthModal(false); stopCamera(); setAuthMode(null); }}
-                className="absolute top-4 right-4 text-slate-400 hover:text-white z-10 p-1 bg-black/20 rounded-full"
-              >
-                <XCircle size={20} />
-              </button>
-
-              {!authMode && (
-                <div className="p-8 text-center">
-                   <div className="w-16 h-16 bg-navy-50 dark:bg-navy-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                     <ShieldAlert size={32} className="text-navy-600 dark:text-blue-400" />
-                   </div>
-                   <h3 className="font-bold text-xl text-navy-900 dark:text-white mb-2">Verify Identity</h3>
-                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
-                     Accessing CCTNS/ESAKYA evidence requires elevated clearance verification.
-                   </p>
-                   <div className="space-y-3">
-                     <button 
-                       onClick={() => setAuthMode('face')}
-                       className="w-full bg-navy-800 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-navy-700 transition flex items-center justify-center gap-2"
-                     >
-                       <Camera size={18} /> Face Verification
-                     </button>
-                     <button 
-                       onClick={() => setAuthMode('password')}
-                       className="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-white py-3 rounded-lg font-bold hover:bg-slate-50 dark:hover:bg-slate-600 transition flex items-center justify-center gap-2"
-                     >
-                       <KeyRound size={18} /> Enter PIN
-                     </button>
-                   </div>
-                </div>
-              )}
-
-              {authMode === 'face' && (
-                <div className="flex flex-col h-[400px]">
-                   <div className="relative flex-1 bg-black overflow-hidden">
-                      <video 
-                        ref={videoRef} 
-                        autoPlay 
-                        playsInline 
-                        muted 
-                        className="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]" 
-                      />
-                      <div className="absolute inset-0 border-[30px] border-black/50 rounded-xl z-10 pointer-events-none"></div>
-                      
-                      {isScanning && (
-                        <div className="absolute inset-0 flex items-center justify-center z-20">
-                           <div className="w-48 h-48 border-2 border-emerald-500/50 rounded-lg relative overflow-hidden shadow-[0_0_15px_rgba(16,185,129,0.5)]">
-                              <div className="absolute top-0 left-0 w-full h-1 bg-emerald-400 shadow-[0_0_10px_#34d399] animate-scan"></div>
-                              <div className="absolute bottom-2 left-0 w-full text-center">
-                                <span className="bg-black/60 text-emerald-400 text-[10px] px-2 py-1 rounded font-mono">VERIFYING OFFICER...</span>
-                              </div>
-                           </div>
-                        </div>
-                      )}
-                   </div>
-                   <div className="p-4 bg-slate-900 text-white text-center">
-                      <h3 className="font-bold text-lg mb-1">Face Verification</h3>
-                      <p className="text-xs text-slate-400">Align your face within the frame.</p>
-                   </div>
-                </div>
-              )}
-
-              {authMode === 'password' && (
-                <div className="p-8">
-                   <div className="text-center mb-6">
-                     <div className="w-16 h-16 bg-navy-50 dark:bg-navy-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                       <KeyRound size={32} className="text-navy-600 dark:text-blue-400" />
-                     </div>
-                     <h3 className="font-bold text-xl text-navy-900 dark:text-white">Enter Security PIN</h3>
-                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Officer authorization code required.</p>
-                   </div>
-                   <form onSubmit={(e) => { e.preventDefault(); if(passwordInput.length > 3) handleAuthSuccess(); }}>
-                     <input 
-                       type="password" 
-                       autoFocus
-                       className="w-full text-center text-2xl tracking-[0.5em] font-bold py-3 border-b-2 border-slate-300 dark:border-slate-600 bg-transparent focus:border-navy-600 focus:outline-none dark:text-white mb-6"
-                       placeholder="••••"
-                       maxLength={6}
-                       value={passwordInput}
-                       onChange={(e) => setPasswordInput(e.target.value)}
-                     />
-                     <button 
-                       type="submit"
-                       className="w-full bg-navy-800 text-white py-3 rounded-lg font-bold hover:bg-navy-700 transition shadow-lg flex items-center justify-center gap-2"
-                     >
-                       <Unlock size={18} /> Verify Identity
-                     </button>
-                   </form>
-                </div>
-              )}
-           </div>
-        </div>
-      )}
     </div>
   );
 };

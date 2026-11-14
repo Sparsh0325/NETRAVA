@@ -79,7 +79,7 @@ const AnalyticsDashboard: React.FC = () => {
 
       <div role="note" className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
         <ShieldAlert className="mt-0.5 shrink-0" size={18} />
-        <p>These counts and records come from this saved case. IntelliShare does not generate case-specific predictions, identity matches, sentiment findings, or unverified links.</p>
+        <p>These counts and records come from this saved case. NETRAVA does not generate case-specific predictions, identity matches, sentiment findings, or unverified links.</p>
       </div>
 
       <div className="flex overflow-x-auto border-b border-slate-200 dark:border-slate-700">{tabs.map(({ id: tabId, label, icon: Icon }) => <button key={tabId} onClick={() => setActiveTab(tabId)} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium ${activeTab === tabId ? 'border-blue-600 text-navy-900 dark:text-white' : 'border-transparent text-slate-500 hover:text-navy-700 dark:text-slate-400'}`}><Icon size={16} />{label}</button>)}</div>

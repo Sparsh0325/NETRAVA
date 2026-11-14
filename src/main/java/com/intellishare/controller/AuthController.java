@@ -4,6 +4,7 @@ import com.intellishare.dto.auth.AuthResponse;
 import com.intellishare.dto.auth.LoginRequest;
 import com.intellishare.dto.auth.RegisterRequest;
 import com.intellishare.dto.auth.UserResponse;
+import com.intellishare.dto.auth.UpdateProfileRequest;
 import com.intellishare.model.User;
 import com.intellishare.service.AuthService;
 import jakarta.validation.Valid;
@@ -29,4 +30,9 @@ public class AuthController {
 
     @GetMapping("/me")
     public UserResponse me(@AuthenticationPrincipal User user) { return authService.currentUser(user); }
+
+    @PutMapping("/me")
+    public UserResponse updateProfile(@AuthenticationPrincipal User user, @Valid @RequestBody UpdateProfileRequest request) {
+        return authService.updateProfile(user, request);
+    }
 }

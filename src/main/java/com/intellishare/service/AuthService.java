@@ -4,6 +4,7 @@ import com.intellishare.dto.auth.AuthResponse;
 import com.intellishare.dto.auth.LoginRequest;
 import com.intellishare.dto.auth.RegisterRequest;
 import com.intellishare.dto.auth.UserResponse;
+import com.intellishare.dto.auth.UpdateProfileRequest;
 import com.intellishare.model.User;
 import com.intellishare.audit.AuditService;
 import com.intellishare.repository.UserRepository;
@@ -67,6 +68,15 @@ public class AuthService {
     }
 
     public UserResponse currentUser(User user) { return UserResponse.from(user); }
+
+    @Transactional
+    public UserResponse updateProfile(User principal, UpdateProfileRequest request) {
+        User user = users.findById(principal.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User account was not found"));
+        user.updateProfile(request.name().trim(), clean(request.department()), clean(request.phone()));
+        audit.record(user, "PROFILE_UPDATED", "user:" + user.getId(), "Profile contact fields updated");
+        return UserResponse.from(user);
+    }
 
     private AuthResponse response(User user) {
         return new AuthResponse(tokens.issue(user), "Bearer", tokens.getExpirationSeconds(), UserResponse.from(user));

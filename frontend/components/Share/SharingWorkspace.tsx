@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertCircle, Loader, LockKeyhole, Plus, RefreshCw, Share2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ApiError, CaseShare, createCaseShare, fetchShares, revokeCaseShare } from '../../lib/api';
 
 const SharingWorkspace: React.FC = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [shares,setShares]=useState<CaseShare[]>([]);
-  const [caseKey,setCaseKey]=useState('');
+  const [caseKey,setCaseKey]=useState(() => searchParams.get('case') || '');
   const [recipient,setRecipient]=useState('');
   const [permission,setPermission]=useState<'READ'|'EDIT'>('READ');
   const [loading,setLoading]=useState(true);

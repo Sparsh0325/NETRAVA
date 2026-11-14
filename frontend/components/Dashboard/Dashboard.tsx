@@ -15,6 +15,7 @@ import {
   MapPin 
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { ApiError, DashboardStats, fetchAuditLogs, fetchDashboardStats } from '../../lib/api';
 
 // Restored Components
@@ -26,6 +27,7 @@ import TrendingPatterns from './TrendingPatterns';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { preferences } = useTheme();
   
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [statsError, setStatsError] = useState('');
@@ -50,7 +52,7 @@ const Dashboard = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-700">
         <div>
           <h2 className="text-2xl font-bold text-navy-900 dark:text-white tracking-tight flex items-center gap-2">
-            <Briefcase className="text-navy-600 dark:text-blue-400" /> Investigative Continuity Hub
+            <Briefcase className="text-navy-600 dark:text-blue-400" /> NETRAVA Investigative Continuity Hub
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
             Manage saved cases and view recorded agency activity.
@@ -64,7 +66,7 @@ const Dashboard = () => {
       </div>
 
       {/* 2. Restored Operational Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {preferences.showQuickStats && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard 
           title="Total Registered Cases" 
           value={stats?.totalCases ?? '—'} 
@@ -91,7 +93,7 @@ const Dashboard = () => {
           subtext="Saved closed cases" 
           icon={CheckCircle} 
         />
-      </div>
+      </div>}
 
       {statsError && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{statsError}</div>}
 
@@ -142,8 +144,8 @@ const Dashboard = () => {
       </div>
 
       {/* 4. Situational Awareness (Map + Activity) */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-[500px]">
-        <div className="xl:col-span-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
+      <div className={`grid grid-cols-1 ${preferences.realTimeMap ? 'xl:grid-cols-3' : 'xl:grid-cols-1'} gap-6 h-[500px]`}>
+        {preferences.realTimeMap && <div className="xl:col-span-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
            <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
              <h3 className="font-bold text-navy-900 dark:text-white flex items-center gap-2">
                <MapPin size={18} className="text-navy-600 dark:text-blue-400" /> Saved Case Locations
@@ -152,7 +154,7 @@ const Dashboard = () => {
            <div className="flex-1 relative">
              <CrimeHeatmap />
            </div>
-        </div>
+        </div>}
         
         <div className="xl:col-span-1 h-full">
            <div className="relative h-full">

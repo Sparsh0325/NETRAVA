@@ -98,7 +98,7 @@ const Register = () => {
           : error.status === 400
             ? error.message
             : error.status === 0
-              ? 'Cannot reach the IntelliShare API. Make sure the Java backend is running.'
+              ? 'Cannot reach the NETRAVA API. Make sure the Java backend is running.'
               : error.message;
         setSubmitError(message);
       } else {
@@ -128,7 +128,7 @@ const Register = () => {
             <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-md border border-white/20">
               <Shield className="w-10 h-10 text-blue-200" />
             </div>
-            <h2 className="text-3xl font-bold mb-4">Join IntelliShare</h2>
+            <h2 className="text-3xl font-bold mb-4">Join NETRAVA</h2>
             <p className="text-blue-100 text-sm leading-relaxed mb-8">
               Secure inter-agency collaboration platform for verified law enforcement personnel.
             </p>

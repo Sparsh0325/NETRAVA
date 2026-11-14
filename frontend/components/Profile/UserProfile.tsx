@@ -1,47 +1,66 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { 
+import {
   User, 
   Shield, 
   Settings, 
   Activity, 
-  Camera, 
   Save, 
-  Smartphone, 
   Globe, 
-  Monitor, 
   LogOut,
-  Key,
-  Clock,
-  MapPin,
-  Search
 } from 'lucide-react';
+import { ApiError, AuditEvent, downloadMyAuditCsv, fetchMyAuditLogs } from '../../lib/api';
 
 const UserProfile = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const { preferences, updatePreference } = useTheme();
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'preferences' | 'activity'>('profile');
   const [isLoading, setIsLoading] = useState(false);
+  const [profileMessage, setProfileMessage] = useState('');
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [auditPage, setAuditPage] = useState(0);
+  const [auditPages, setAuditPages] = useState(0);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState('');
 
-  // Mock form state (pre-filled with user data or placeholders)
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    phone: '+91 98765 43210',
-    designation: 'Senior Investigating Officer',
-    department: 'Cyber Crime Division',
-    location: 'Headquarters, New Delhi'
+    phone: user?.phone || '',
+    department: user?.department || '',
   });
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    setFormData({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '', department: user?.department || '' });
+  }, [user?.name, user?.email, user?.phone, user?.department]);
+
+  useEffect(() => {
+    if (activeTab !== 'activity') return;
+    let active = true;
+    setAuditLoading(true);
+    setAuditError('');
+    fetchMyAuditLogs({ page: auditPage, size: 20 })
+      .then((page) => {
+        if (!active) return;
+        setAuditEvents(page.content);
+        setAuditPages(page.totalPages);
+      })
+      .catch((cause) => { if (active) setAuditError(cause instanceof ApiError ? cause.message : 'Could not load your saved audit history.'); })
+      .finally(() => { if (active) setAuditLoading(false); });
+    return () => { active = false; };
+  }, [activeTab, auditPage]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      alert('Profile updated successfully.');
-    }, 1000);
+    setProfileMessage('');
+    try {
+      await updateProfile({ name: formData.name, phone: formData.phone, department: formData.department });
+      setProfileMessage('Profile saved.');
+    } catch (cause) {
+      setProfileMessage(cause instanceof ApiError ? cause.message : 'Profile could not be saved.');
+    } finally { setIsLoading(false); }
   };
 
   const TabButton = ({ id, label, icon: Icon }: { id: typeof activeTab, label: string, icon: any }) => (
@@ -75,15 +94,8 @@ const UserProfile = () => {
         <div className="lg:col-span-1">
           <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6">
             <div className="p-6 flex flex-col items-center border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
-              <div className="relative group cursor-pointer">
-                <img 
-                  src={user?.avatar || "https://picsum.photos/100/100"} 
-                  alt="Profile" 
-                  className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-700 shadow-md object-cover"
-                />
-                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Camera className="text-white w-8 h-8" />
-                </div>
+              <div aria-hidden="true" className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-navy-800 text-2xl font-bold text-white shadow-md dark:border-slate-700">
+                {(user?.name || '?').split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase()}
               </div>
               <h3 className="mt-4 font-bold text-navy-900 dark:text-white text-lg">{user?.name}</h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm">{user?.role}</p>
@@ -125,7 +137,9 @@ const UserProfile = () => {
                     <div>
                       <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Full Name</label>
                       <input 
-                        type="text" 
+                        type="text"
+                        required
+                        maxLength={100}
                         value={formData.name}
                         onChange={e => setFormData({...formData, name: e.target.value})}
                         className="w-full border border-slate-300 dark:border-slate-600 rounded-md px-4 py-2 text-sm focus:ring-2 focus:ring-navy-600 focus:outline-none dark:bg-slate-700 dark:text-white"
@@ -153,18 +167,10 @@ const UserProfile = () => {
                     <div>
                       <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Contact Number</label>
                       <input 
-                        type="text" 
+                        type="tel"
+                        maxLength={50}
                         value={formData.phone}
                         onChange={e => setFormData({...formData, phone: e.target.value})}
-                        className="w-full border border-slate-300 dark:border-slate-600 rounded-md px-4 py-2 text-sm focus:ring-2 focus:ring-navy-600 focus:outline-none dark:bg-slate-700 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Designation / Rank</label>
-                      <input 
-                        type="text" 
-                        value={formData.designation}
-                        onChange={e => setFormData({...formData, designation: e.target.value})}
                         className="w-full border border-slate-300 dark:border-slate-600 rounded-md px-4 py-2 text-sm focus:ring-2 focus:ring-navy-600 focus:outline-none dark:bg-slate-700 dark:text-white"
                       />
                     </div>
@@ -172,24 +178,15 @@ const UserProfile = () => {
                       <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Department</label>
                       <input 
                         type="text" 
+                        maxLength={100}
                         value={formData.department}
                         onChange={e => setFormData({...formData, department: e.target.value})}
                         className="w-full border border-slate-300 dark:border-slate-600 rounded-md px-4 py-2 text-sm focus:ring-2 focus:ring-navy-600 focus:outline-none dark:bg-slate-700 dark:text-white"
                       />
                     </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Posted Location</label>
-                      <div className="relative">
-                        <MapPin size={16} className="absolute left-3 top-2.5 text-slate-400" />
-                        <input 
-                          type="text" 
-                          value={formData.location}
-                          onChange={e => setFormData({...formData, location: e.target.value})}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded-md pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-navy-600 focus:outline-none dark:bg-slate-700 dark:text-white"
-                        />
-                      </div>
-                    </div>
                   </div>
+
+                  {profileMessage && <p role="status" className={`text-sm ${profileMessage === 'Profile saved.' ? 'text-emerald-700' : 'text-red-700'}`}>{profileMessage}</p>}
 
                   <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end">
                     <button 
@@ -216,90 +213,10 @@ const UserProfile = () => {
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-bold text-navy-900 dark:text-white border-l-4 border-navy-600 pl-3">Security Settings</h3>
                 </div>
-
-                <div className="space-y-8 max-w-3xl">
-                  {/* Password Change */}
-                  <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <h4 className="font-bold text-navy-900 dark:text-white mb-4 flex items-center gap-2">
-                      <Key size={18} className="text-navy-600 dark:text-blue-400" /> Change Password
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1 uppercase">Current Password</label>
-                        <input type="password" className="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 text-sm dark:bg-slate-800 dark:text-white" placeholder="••••••••" />
-                      </div>
-                      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1 uppercase">New Password</label>
-                          <input type="password" className="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 text-sm dark:bg-slate-800 dark:text-white" placeholder="••••••••" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1 uppercase">Confirm Password</label>
-                          <input type="password" className="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 text-sm dark:bg-slate-800 dark:text-white" placeholder="••••••••" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                       <button className="text-sm font-bold text-navy-700 dark:text-blue-400 hover:text-navy-900 underline">Update Password</button>
-                    </div>
-                  </div>
-
-                  {/* 2FA */}
-                  <div className="flex items-start justify-between p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm">
-                    <div className="flex gap-4">
-                      <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 rounded-full h-fit">
-                        <Smartphone size={24} />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-navy-900 dark:text-white">Two-Factor Authentication (2FA)</h4>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Secure your account with OTP verification via mobile.</p>
-                        <div className="mt-2 flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                          <span className="w-2 h-2 bg-emerald-500 rounded-full"></span> Enabled (Last verified: Today)
-                        </div>
-                      </div>
-                    </div>
-                    <button className="border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">Configure</button>
-                  </div>
-
-                  {/* Active Sessions */}
-                  <div>
-                    <h4 className="font-bold text-navy-900 dark:text-white mb-4">Active Sessions</h4>
-                    <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                      <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-700">
-                          <tr>
-                            <th className="px-4 py-3">Device</th>
-                            <th className="px-4 py-3">Location</th>
-                            <th className="px-4 py-3">Last Active</th>
-                            <th className="px-4 py-3 text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800">
-                          <tr>
-                            <td className="px-4 py-3 flex items-center gap-2 dark:text-slate-300">
-                              <Monitor size={16} className="text-slate-400" />
-                              <span className="font-medium">Windows PC (Chrome)</span>
-                              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 px-1.5 rounded border border-emerald-200 dark:border-emerald-800">Current</span>
-                            </td>
-                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400">New Delhi, IN</td>
-                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400">Active Now</td>
-                            <td className="px-4 py-3 text-right"></td>
-                          </tr>
-                          <tr className="bg-slate-50/50 dark:bg-slate-900/50">
-                            <td className="px-4 py-3 flex items-center gap-2 dark:text-slate-300">
-                              <Smartphone size={16} className="text-slate-400" />
-                              <span className="font-medium">iPhone 13 (Safari)</span>
-                            </td>
-                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400">Mumbai, IN</td>
-                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400">2 days ago</td>
-                            <td className="px-4 py-3 text-right">
-                              <button className="text-red-600 dark:text-red-400 text-xs font-bold hover:underline">Revoke</button>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                <div role="note" className="max-w-3xl space-y-4 rounded-lg border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                  <p><strong>Authentication:</strong> NETRAVA uses password hashing with BCrypt and signed JWT bearer tokens.</p>
+                  <p>Password changes, two-factor authentication, and active-session management are not available in this version. The old screen showed sample devices and falsely marked 2FA as enabled; those controls have been removed.</p>
+                  <p>Signing out clears the token from this browser. It does not revoke tokens already issued to other sessions.</p>
                 </div>
               </div>
             )}
@@ -391,7 +308,7 @@ const UserProfile = () => {
                            onChange={(e) => updatePreference('realTimeMap', e.target.checked)}
                            className="rounded text-navy-600 focus:ring-navy-600" 
                          />
-                         Enable Real-time Map Updates
+                         Show saved case locations on dashboard
                        </label>
                        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer select-none">
                          <input 
@@ -413,46 +330,23 @@ const UserProfile = () => {
               <div className="p-8 animate-fade-in">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-bold text-navy-900 dark:text-white border-l-4 border-navy-600 pl-3">Recent Activity History</h3>
-                  <button className="text-xs text-navy-600 dark:text-blue-400 hover:underline font-bold">Export Log</button>
+                  <button onClick={() => { setAuditError(''); void downloadMyAuditCsv().catch(cause => setAuditError(cause instanceof ApiError ? cause.message : 'Audit export failed.')); }} disabled={auditLoading} className="text-xs font-bold text-navy-600 hover:underline disabled:opacity-50 dark:text-blue-400">Export My Audit</button>
                 </div>
 
-                <div className="space-y-6">
-                  {/* Recent Searches */}
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Recent Searches</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {['DL-3C-S-2211', 'Case #4991', 'Suspect: Raj Malhotra', 'Sector 44 Theft'].map((term, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-full text-xs font-medium text-slate-600 dark:text-slate-300 shadow-sm">
-                          <Search size={12} /> {term}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Actions Timeline */}
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Action Log</h4>
-                    <div className="relative border-l-2 border-slate-200 dark:border-slate-700 ml-3 space-y-6 pl-6 py-2">
-                      {[
-                        { action: 'Updated profile information', time: 'Just now', type: 'system' },
-                        { action: 'Viewed Case #FIR-2024-1044', time: '2 hours ago', type: 'view' },
-                        { action: 'Exported Monthly Crime Report', time: 'Yesterday, 10:00 AM', type: 'export' },
-                        { action: 'Login from new device (IP: 192.168.1.1)', time: 'Yesterday, 09:15 AM', type: 'security' },
-                        { action: 'Shared evidence with NIA Analyst', time: '2 days ago', type: 'share' },
-                      ].map((log, i) => (
-                        <div key={i} className="relative">
-                          <div className={`absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 shadow-sm ${
-                            log.type === 'security' ? 'bg-red-500' : 
-                            log.type === 'export' ? 'bg-emerald-500' : 'bg-navy-500'
-                          }`}></div>
-                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{log.action}</p>
-                          <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            <Clock size={12} /> {log.time}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">Persisted actions recorded for your badge number. Search history and page views are not recorded.</p>
+                {auditError && <p role="alert" className="mb-4 text-sm text-red-700">{auditError}</p>}
+                {auditLoading ? <p className="py-8 text-center text-sm text-slate-500">Loading your audit history…</p>
+                  : auditEvents.length === 0 ? <p className="py-8 text-center text-sm text-slate-500">No audit events are saved for your account yet.</p>
+                    : <div className="relative ml-3 space-y-5 border-l-2 border-slate-200 py-2 pl-6 dark:border-slate-700">{auditEvents.map(event => <article key={event.id} className="relative">
+                      <div className="absolute -left-[31px] top-1 h-4 w-4 rounded-full border-2 border-white bg-navy-500 shadow-sm dark:border-slate-800" />
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{event.action.replaceAll('_', ' ')}</p>
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{event.resource} · {new Date(event.timestamp).toLocaleString()}</p>
+                      {event.details && <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{event.details}</p>}
+                    </article>)}</div>}
+                <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-700">
+                  <button onClick={() => setAuditPage(page => Math.max(0, page - 1))} disabled={auditPage === 0 || auditLoading} className="text-xs font-bold text-navy-600 disabled:opacity-40 dark:text-blue-400">Newer</button>
+                  <span className="text-xs text-slate-500">{auditPages === 0 ? 'No pages' : `Page ${auditPage + 1} of ${auditPages}`}</span>
+                  <button onClick={() => setAuditPage(page => Math.min(Math.max(0, auditPages - 1), page + 1))} disabled={auditPage + 1 >= auditPages || auditLoading} className="text-xs font-bold text-navy-600 disabled:opacity-40 dark:text-blue-400">Older</button>
                 </div>
               </div>
             )}

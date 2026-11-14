@@ -43,7 +43,7 @@ const IntelligenceHub = () => {
     {
       id: 'patterns',
       title: 'Cross-Case Pattern',
-      desc: 'Open illustrative network and pattern visualizations using synthetic sample data.',
+      desc: 'View saved-case continuity and analytics; inferred network and pattern analysis is unavailable.',
       icon: Activity,
       path: '/analytics',
       color: 'bg-emerald-600'
@@ -67,7 +67,7 @@ const IntelligenceHub = () => {
       </div>
 
       <div role="note" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-        This architecture screen is illustrative. IntelliShare is not connected to CCTNS, NCRB, ICJS, ESAKYA, or other external case systems. Face-based identification is unavailable.
+        This architecture screen is illustrative. NETRAVA is not connected to CCTNS, NCRB, ICJS, ESAKYA, or other external case systems. Face-based identification is unavailable.
       </div>
 
       {/* Architecture Diagram */}
@@ -214,8 +214,7 @@ const IntelligenceHub = () => {
         <div>
           <p className="font-bold">Legal & Governance Notice</p>
           <p className="mt-1 opacity-90 text-xs">
-            This Intelligence Layer provides AI-generated insights based on read-only access to CCTNS/NCRB and ESAKYA data. 
-            Inferences generated here (e.g., "Suspected Links") are for investigative guidance only and must be verified by an authorized officer before inclusion in official case files or charge sheets.
+            NETRAVA is not connected to CCTNS, NCRB, or ESAKYA. Optional Gemini analysis uses only the prompt text submitted by the user and does not access agency records. No inferred suspect links are generated. Any AI response must be independently verified by an authorized person.
           </p>
         </div>
       </div>

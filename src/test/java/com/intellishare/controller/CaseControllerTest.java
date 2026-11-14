@@ -117,6 +117,10 @@ class CaseControllerTest {
                 .content("{\"title\":\"Updated through share\",\"type\":\"Theft\",\"status\":\"Under Investigation\",\"priority\":\"Medium\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.title").value("Updated through share"));
         mvc.perform(delete("/api/shares/{id}",editShareId).header("Authorization",bearer(recipient))).andExpect(status().isNotFound());
+        assertTrue(auditCount("CASE_SHARE_GRANT") >= 2);
+        assertTrue(auditCount("SHARED_CASE_ACCESS") >= 1);
+        assertTrue(auditCount("SHARED_CASE_LIST_ACCESS") >= 1);
+        assertEquals(1, auditCount("CASE_SHARE_REVOKE"));
     }
 
     private String register(String email,String agency) throws Exception {
@@ -133,4 +137,5 @@ class CaseControllerTest {
         return "{\"caseNumber\":\""+number+"\",\"title\":\""+title+"\",\"type\":\"Theft\",\"city\":\"Jaipur\",\"priority\":\"Medium\",\"entities\":[{\"type\":\"Person\",\"value\":\"Known person\"}]}";
     }
     private String bearer(String token){return "Bearer "+token;}
+    private long auditCount(String action){return jdbc.queryForObject("SELECT count(*) FROM audit_logs WHERE action = ?",Long.class,action);}
 }

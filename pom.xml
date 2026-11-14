@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>com.intellishare</groupId>
-    <artifactId>intellishare-backend</artifactId>
+    <artifactId>netrava-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>intellishare-backend</name>
-    <description>IntelliShare Law Enforcement Intelligence Platform Backend</description>
+    <name>netrava-backend</name>
+    <description>NETRAVA — Next-generation Visual &amp; Investigative Intelligence Platform backend</description>
 
     <properties>
         <java.version>25</java.version>

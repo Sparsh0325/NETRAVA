@@ -7,6 +7,8 @@ export interface User {
   agency: string;
   role: Role;
   email: string;
+  department?: string | null;
+  phone?: string | null;
   avatar?: string;
 }
 

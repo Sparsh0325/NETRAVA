@@ -1,6 +1,6 @@
 {
-  "name": "IntelliShare - Case Continuity Platform",
-  "description": "Investigative understanding layer designed to reduce information loss during officer transfers. Supports CCTNS & ESAKYA.",
+  "name": "NETRAVA",
+  "description": "Next-generation Visual & Investigative Intelligence Platform.",
   "requestFramePermissions": [
     "geolocation",
     "camera"

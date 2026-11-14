@@ -27,6 +27,19 @@ class AuditServiceTest {
     }
 
     @Test
+    void personalAuditViewIsScopedByImmutableBadgeNumber() {
+        User owner = new User("Owner", "owner@test.invalid", "not-a-real-password", "OWN-71", "Unit A", null, null);
+        User colleague = new User("Colleague", "colleague@test.invalid", "not-a-real-password", "COL-72", "Unit A", null, null);
+        audit.record(owner, "CASE_VIEW", "case:OWN-CASE", "Owner event");
+        audit.record(colleague, "CASE_VIEW", "case:COL-CASE", "Colleague event");
+
+        AuditPage own = audit.listOwn(owner, 0, 20);
+        assertEquals(1, own.totalElements());
+        assertEquals("OWN-71", own.content().getFirst().actorBadgeNumber());
+        assertFalse(audit.exportOwnCsv(owner).contains("Colleague event"));
+    }
+
+    @Test
     void versionTwoHashEncodingSeparatesFieldBoundariesAndNullFromEmpty() {
         var at = OffsetDateTime.of(2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
         String splitOne = AuditService.hashV2(1, at, "a\nb", "c", null, "agency", "action", "resource", "details", "0".repeat(64));

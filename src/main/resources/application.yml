@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: intellishare-backend
+    name: netrava-backend
   datasource:
     url: ${DB_URL:jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5436}/${DB_NAME:intellishare}}
     username: ${DB_USERNAME:intellishare_user}

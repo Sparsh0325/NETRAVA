@@ -85,13 +85,27 @@ export function fetchAuditLogs(params: { page?: number; size?: number; q?: strin
   return apiRequest<AuditPage>(`/audit-logs?${query}`);
 }
 
+export function fetchMyAuditLogs(params: { page?: number; size?: number } = {}) {
+  const query = new URLSearchParams({ page: String(params.page ?? 0), size: String(params.size ?? 20) });
+  return apiRequest<AuditPage>(`/audit-logs/me?${query}`);
+}
+
 export async function downloadAuditCsv() {
   const token = localStorage.getItem('intellishare_token');
   const response = await fetch(`${API_BASE_URL}/audit-logs/export.csv`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
   if (!response.ok) throw new ApiError(`Audit export failed (${response.status})`, response.status);
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'intellishare-audit.csv'; anchor.click(); URL.revokeObjectURL(url);
+  const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'netrava-audit.csv'; anchor.click(); URL.revokeObjectURL(url);
+}
+
+export async function downloadMyAuditCsv() {
+  const token = localStorage.getItem('intellishare_token');
+  const response = await fetch(`${API_BASE_URL}/audit-logs/me/export.csv`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!response.ok) throw new ApiError(`Personal audit export failed (${response.status})`, response.status);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'netrava-my-audit.csv'; anchor.click(); URL.revokeObjectURL(url);
 }
 
 export interface CriminalRecord {
@@ -140,7 +154,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   try {
     response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
   } catch {
-    throw new ApiError(`Cannot connect to the IntelliShare API at ${API_BASE_URL}.`, 0);
+    throw new ApiError(`Cannot connect to the NETRAVA API at ${API_BASE_URL}.`, 0);
   }
 
   const payload = response.status === 204 ? undefined : await response.json().catch(() => undefined);
@@ -160,7 +174,8 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
 export function mapUser(user: ApiUser) {
   return {
     id: String(user.id), name: user.name, email: user.email, badgeNumber: user.badgeNumber,
-    agency: user.agency, role: user.role as import('../types').Role, avatar: user.avatarUrl || undefined,
+    agency: user.agency, role: user.role as import('../types').Role,
+    department: user.department, phone: user.phone, avatar: user.avatarUrl || undefined,
   };
 }
 
@@ -189,6 +204,13 @@ export function createCase(data: {
   entities?: Array<{ type: string; value: string; details?: string }>;
 }) {
   return apiRequest<ApiCase>('/cases', { method: 'POST', body: JSON.stringify(data) }).then(normalizeCase);
+}
+
+export function updateCase(id: string, data: {
+  title: string; description?: string; type: string; status: Case['status']; priority: Case['priority'];
+  incidentDate?: string; address?: string; city?: string; latitude?: number; longitude?: number;
+}) {
+  return apiRequest<ApiCase>(`/cases/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }).then(normalizeCase);
 }
 
 export function deleteCase(id: string) {

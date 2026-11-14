@@ -56,7 +56,7 @@ const Sidebar = () => {
            <ShieldAlert className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="font-bold text-lg tracking-wide text-white leading-tight">INTELLISHARE</h1>
+          <h1 className="font-bold text-lg tracking-wide text-white leading-tight">NETRAVA</h1>
           <p className="text-[10px] text-slate-400 uppercase tracking-widest group-hover:text-slate-300">Official Use Only</p>
         </div>
       </div>

@@ -46,7 +46,7 @@ const VisualIntelligence: React.FC = () => (
         ))}
       </div>
       <p className="mt-5 text-xs leading-5 text-slate-500 dark:text-slate-400">
-        The original IntelliShare visual-analysis page is retained as a safety notice. The app has no real-world face recognition or suspect identification feature.
+        The original NETRAVA visual-analysis page is retained as a safety notice. The app has no real-world face recognition or suspect identification feature.
       </p>
     </section>
   </div>

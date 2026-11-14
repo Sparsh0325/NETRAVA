@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Search, 
   Mic, 
@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Case } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ApiError, CriminalRecord, fetchCases, fetchCriminalRecords } from '../../lib/api';
 
 // Local phrase hints map to supported case filters; results always come from the API.
@@ -33,6 +33,8 @@ interface ExtractedEntity {
 
 const SearchModule = () => {
   const { preferences } = useTheme();
+  const [searchParams] = useSearchParams();
+  const initialQuery = searchParams.get('q')?.trim() || '';
   const [query, setQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [results, setResults] = useState<Case[]>([]);
@@ -81,6 +83,13 @@ const SearchModule = () => {
       setResults([]); setCriminalResults([]); setError(cause instanceof ApiError ? cause.message : 'Search could not be completed.');
     } finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    if (initialQuery) {
+      setQuery(initialQuery);
+      void processQuery(initialQuery);
+    }
+  }, [initialQuery]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

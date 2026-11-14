@@ -58,10 +58,36 @@ public class AuditService {
     }
 
     @Transactional(readOnly = true)
+    public AuditPage listOwn(User actor, int page, int size) {
+        validatePage(page, size);
+        String badge = actor.getBadgeNumber();
+        Long total = jdbc.queryForObject("SELECT count(*) FROM audit_logs WHERE actor_badge_number = ?", Long.class, badge);
+        List<AuditEvent> rows = jdbc.query("SELECT id,chain_index,timestamp,actor_username,actor_role,actor_badge_number,agency,action,resource,details,previous_hash,hash,hash_version FROM audit_logs WHERE actor_badge_number = ? ORDER BY chain_index DESC LIMIT ? OFFSET ?", (rs, n) -> new AuditEvent(
+                rs.getLong("id"), rs.getLong("chain_index"), rs.getObject("timestamp", OffsetDateTime.class), rs.getString("actor_username"),
+                rs.getString("actor_role"), rs.getString("actor_badge_number"), rs.getString("agency"), rs.getString("action"), rs.getString("resource"),
+                rs.getString("details"), rs.getString("previous_hash"), rs.getString("hash"), rs.getInt("hash_version")), badge, size, (long) page * size);
+        long count = total == null ? 0 : total;
+        return new AuditPage(rows, page, size, count, (int) ((count + size - 1) / size));
+    }
+
+    @Transactional(readOnly = true)
     public String exportCsv(User actor) {
         StringBuilder csv = new StringBuilder("timestamp,actor,role,agency,action,resource,details,chain_index,hash\r\n");
         for (int pageNumber = 0; ; pageNumber++) {
             AuditPage page = list(actor, pageNumber, 1000, null);
+            for (AuditEvent e : page.content()) csv.append(cell(e.timestamp().toString())).append(',').append(cell(e.actorUsername())).append(',')
+                    .append(cell(e.actorRole())).append(',').append(cell(e.agency())).append(',').append(cell(e.action())).append(',')
+                    .append(cell(e.resource())).append(',').append(cell(e.details())).append(',').append(e.chainIndex()).append(',').append(cell(e.hash())).append("\r\n");
+            if (pageNumber + 1 >= page.totalPages()) break;
+        }
+        return csv.toString();
+    }
+
+    @Transactional(readOnly = true)
+    public String exportOwnCsv(User actor) {
+        StringBuilder csv = new StringBuilder("timestamp,actor,role,agency,action,resource,details,chain_index,hash\r\n");
+        for (int pageNumber = 0; ; pageNumber++) {
+            AuditPage page = listOwn(actor, pageNumber, 1000);
             for (AuditEvent e : page.content()) csv.append(cell(e.timestamp().toString())).append(',').append(cell(e.actorUsername())).append(',')
                     .append(cell(e.actorRole())).append(',').append(cell(e.agency())).append(',').append(cell(e.action())).append(',')
                     .append(cell(e.resource())).append(',').append(cell(e.details())).append(',').append(e.chainIndex()).append(',').append(cell(e.hash())).append("\r\n");
